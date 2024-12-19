@@ -1,7 +1,5 @@
-import Message from '../models/messageModel';
-import { IMessage } from '../models/messageModel';
+import Message, { IMessage } from '../models/messageModel';
 
-// Função para recuperar todas as mensagens
 export const getMessages = async (): Promise<IMessage[]> => {
   try {
     const messages = await Message.find().sort({ timestamp: 1 });
@@ -12,8 +10,7 @@ export const getMessages = async (): Promise<IMessage[]> => {
   }
 };
 
-// Função para salvar uma mensagem
-export const saveMessage = async (sender: string, message: string): Promise<IMessage> => {
+export const sendMessage = async (sender: string, message: string): Promise<IMessage> => {
   try {
     const newMessage = new Message({ sender, message });
     await newMessage.save();

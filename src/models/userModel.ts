@@ -1,44 +1,34 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-interface IUser {
+// Interface do Usuário
+export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  comparePassword: (password: string) => Promise<boolean>;
 }
 
-const userSchema = new mongoose.Schema<IUser>({
-  name: {
-    type: String,
-    required: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  password: {
-    type: String,
-    required: true
-  }
+// Schema do Usuário
+const userSchema: Schema<IUser> = new Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
 });
 
-// Função para criptografar a senha antes de salvar o usuário
+// Middleware para criptografar a senha antes de salvar
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
+  if (!this.isModified('password')) return next();
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Método para comparar a senha fornecida com a senha no banco
-userSchema.methods.comparePassword = async function (password: string) {
-  return await bcrypt.compare(password, this.password);
+// Método para comparar senhas
+userSchema.methods.comparePassword = async function (candidatePassword: string) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
-const User = mongoose.model<IUser>('User', userSchema);
-
-export default User;
+// Exporta o modelo
+export default mongoose.model<IUser>('User', userSchema);
