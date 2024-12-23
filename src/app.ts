@@ -6,9 +6,11 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import statusMonitor from 'express-status-monitor';
 import chatRouter from './routes/chatRoutes';
 import authRouter from './routes/authRoutes';
 import { setupSocket } from './socket/socketController';
+import logger from './services/logger';
 
 dotenv.config();
 
@@ -26,6 +28,24 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Middleware de logging
+app.use((req, res, next) => {
+  logger.info({
+    method: req.method,
+    url: req.url,
+    body: req.body,
+    query: req.query,
+    params: req.params,
+  });
+  next();
+});
+
+// Monitoramento de status
+app.use(statusMonitor());
+app.get('/status', (req, res) => {
+  res.sendFile(require.resolve('express-status-monitor/public/index.html'));
+});
+
 // Parse de JSON
 app.use(express.json());
 
@@ -42,7 +62,24 @@ app.use('/api/chat', chatRouter);
 mongoose
   .connect(process.env.MONGO_URI as string)
   .then(() => console.log('Conectado ao MongoDB'))
-  .catch((err) => console.error('Erro ao conectar ao MongoDB:', err));
+  .catch((err) => {
+    logger.error('Erro ao conectar ao MongoDB:', err);
+    console.error('Erro ao conectar ao MongoDB:', err);
+  });
+
+// Middleware de tratamento de erros
+app.use((err: any, req: any, res: any, next: any) => {
+  logger.error({
+    message: err.message,
+    stack: err.stack,
+    method: req.method,
+    url: req.url,
+    body: req.body,
+    query: req.query,
+    params: req.params,
+  });
+  res.status(500).json({ error: 'Ocorreu um erro interno no servidor.' });
+});
 
 // Inicialização do servidor
 const PORT = process.env.PORT || 3000;
