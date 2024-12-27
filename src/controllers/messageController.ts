@@ -2,9 +2,9 @@ import { Request, Response } from 'express';
 import Message, { IMessage } from '../models/messageModel';
 
 // Recupera mensagens com paginação
-export const getMessages = async (req: Request, res: Response): Promise<void> => {
-  const page = parseInt(req.query.page as string) || 1; // Página padrão é 1
-  const limit = parseInt(req.query.limit as string) || 10; // Limite padrão é 10
+export const getMessages = async (query: any): Promise<any> => {
+  const page = parseInt(query.page as string) || 1; // Página padrão é 1
+  const limit = parseInt(query.limit as string) || 10; // Limite padrão é 10
 
   try {
     const messages = await Message.find()
@@ -13,19 +13,16 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
       .limit(limit); // Limita o número de mensagens
 
     const totalMessages = await Message.countDocuments(); // Conta o total de mensagens
-    res.status(200).json({
+    return {
       messages,
       totalPages: Math.ceil(totalMessages / limit),
       currentPage: page,
-    });
+    };
   } catch (err: any) {
-    console.error('Erro ao recuperar mensagens:', err);
-    res.status(500).json({
-      message: 'Erro ao recuperar mensagens',
-      error: err?.message || 'Erro desconhecido',
-    });
+    throw new Error(err.message || 'Erro ao recuperar mensagens');
   }
 };
+
 
 // Envia uma mensagem com timestamp
 export const sendMessage = async (req: Request, res: Response): Promise<void> => {

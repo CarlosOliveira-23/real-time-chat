@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import mongoose from 'mongoose';
@@ -42,7 +42,7 @@ app.use((req, res, next) => {
 
 // Monitoramento de status
 app.use(statusMonitor());
-app.get('/status', (req, res) => {
+app.get('/status', (req: Request, res: Response) => {
   res.sendFile(require.resolve('express-status-monitor/public/index.html'));
 });
 
@@ -51,7 +51,12 @@ app.use(express.json());
 
 // Servidor HTTP e WebSocket
 const server = http.createServer(app);
-const io = new SocketIOServer(server);
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: '*', // Permitir todas as origens (ajuste conforme necessário)
+    methods: ['GET', 'POST'],
+  },
+});
 setupSocket(io);
 
 // Rotas da API
@@ -61,14 +66,18 @@ app.use('/api/chat', chatRouter);
 // Conexão com MongoDB
 mongoose
   .connect(process.env.MONGO_URI as string)
-  .then(() => console.log('Conectado ao MongoDB'))
+  .then(() => {
+    logger.info('Conectado ao MongoDB');
+    console.log('Conectado ao MongoDB');
+  })
   .catch((err) => {
     logger.error('Erro ao conectar ao MongoDB:', err);
     console.error('Erro ao conectar ao MongoDB:', err);
   });
 
+
 // Middleware de tratamento de erros
-app.use((err: any, req: any, res: any, next: any) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   logger.error({
     message: err.message,
     stack: err.stack,
@@ -78,11 +87,15 @@ app.use((err: any, req: any, res: any, next: any) => {
     query: req.query,
     params: req.params,
   });
-  res.status(500).json({ error: 'Ocorreu um erro interno no servidor.' });
+  res.status(err.status || 500).json({
+    error: 'Ocorreu um erro interno no servidor.',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
+  });
 });
 
 // Inicialização do servidor
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+  logger.info(`Servidor rodando na porta ${PORT}`);
 });
