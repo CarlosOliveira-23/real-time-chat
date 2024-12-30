@@ -53,7 +53,7 @@ app.use(express.json());
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
-    origin: '*', // Permitir todas as origens (ajuste conforme necessário)
+    origin: '*',
     methods: ['GET', 'POST'],
   },
 });
